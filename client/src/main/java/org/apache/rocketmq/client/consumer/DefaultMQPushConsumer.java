@@ -89,6 +89,8 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
      *
      * This field defaults to clustering.
      */
+    // 设置消费模式为集群模式，即一个topic只能被集群中的一个消费者消费
+    // 广播模式是一个topic能被集群中的所有消费者消费
     private MessageModel messageModel = MessageModel.CLUSTERING;
 
     /**
