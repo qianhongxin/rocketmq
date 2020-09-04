@@ -107,6 +107,10 @@ import org.apache.rocketmq.store.dledger.DLedgerCommitLog;
 import org.apache.rocketmq.store.stats.BrokerStats;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 
+// Broker管理控制组件
+// 接收网络请求，管理磁盘消息数据，一大堆的后台线程
+
+// broker会有很多功能，每个功能内部都有对应的组件处理，所以会有很多字段啥的。和kafka一样。复杂的东西都这样
 public class BrokerController {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private static final InternalLogger LOG_PROTECTION = InternalLoggerFactory.getLogger(LoggerName.PROTECTION_LOGGER_NAME);
@@ -174,12 +178,16 @@ public class BrokerController {
         final NettyClientConfig nettyClientConfig,
         final MessageStoreConfig messageStoreConfig
     ) {
+        // 保存下传入的4个配置对象
         this.brokerConfig = brokerConfig;
         this.nettyServerConfig = nettyServerConfig;
         this.nettyClientConfig = nettyClientConfig;
         this.messageStoreConfig = messageStoreConfig;
+        // 管理consumer的消费offset的组件
         this.consumerOffsetManager = new ConsumerOffsetManager(this);
+        // 管理Topic配置的
         this.topicConfigManager = new TopicConfigManager(this);
+        // 处理consumer发送请求过来拉取数据的处理器
         this.pullMessageProcessor = new PullMessageProcessor(this);
         this.pullRequestHoldService = new PullRequestHoldService(this);
         this.messageArrivingListener = new NotifyMessageArrivingListener(this.pullRequestHoldService);
@@ -195,6 +203,10 @@ public class BrokerController {
 
         this.slaveSynchronize = new SlaveSynchronize(this);
 
+        // 下面是一大堆的线程池队列，其实就是用来实现某些功能的后台线程池队列，不同的后台功能和处理请求放在不同的线程池中去执行
+        // 因为有些broker的功能是你发送请求给他，它来进行处理的，会用到上面一些组件
+        // 有些broker的功能，实际上是自己的后台线程去执行
+
         this.sendThreadPoolQueue = new LinkedBlockingQueue<Runnable>(this.brokerConfig.getSendThreadPoolQueueCapacity());
         this.pullThreadPoolQueue = new LinkedBlockingQueue<Runnable>(this.brokerConfig.getPullThreadPoolQueueCapacity());
         this.replyThreadPoolQueue = new LinkedBlockingQueue<Runnable>(this.brokerConfig.getReplyThreadPoolQueueCapacity());
@@ -204,9 +216,11 @@ public class BrokerController {
         this.heartbeatThreadPoolQueue = new LinkedBlockingQueue<Runnable>(this.brokerConfig.getHeartbeatThreadPoolQueueCapacity());
         this.endTransactionThreadPoolQueue = new LinkedBlockingQueue<Runnable>(this.brokerConfig.getEndTransactionPoolQueueCapacity());
 
+        // metric统计组件，就是对broker内部进行统计的
         this.brokerStatsManager = new BrokerStatsManager(this.brokerConfig.getBrokerClusterName());
         this.setStoreHost(new InetSocketAddress(this.getBrokerConfig().getBrokerIP1(), this.getNettyServerConfig().getListenPort()));
 
+        // 处理broker故障的组件
         this.brokerFastFailure = new BrokerFastFailure(this);
         this.configuration = new Configuration(
             log,

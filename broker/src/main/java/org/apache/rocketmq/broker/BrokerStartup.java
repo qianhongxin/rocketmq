@@ -192,17 +192,21 @@ public class BrokerStartup {
                     break;
             }
 
+            // 如果基于dleger技术来管理主从同步和commitlog，就设置brokerId为-1
             if (messageStoreConfig.isEnableDLegerCommitLog()) {
                 brokerConfig.setBrokerId(-1);
             }
 
+            // 设置HA监听端口号
             messageStoreConfig.setHaListenPort(nettyServerConfig.getListenPort() + 1);
+            // 下面是和日志相关的
             LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
             JoranConfigurator configurator = new JoranConfigurator();
             configurator.setContext(lc);
             lc.reset();
             configurator.doConfigure(brokerConfig.getRocketmqHome() + "/conf/logback_broker.xml");
 
+            // 如果命令行中包含了-p参数，就打印信息到控制台
             if (commandLine.hasOption('p')) {
                 InternalLogger console = InternalLoggerFactory.getLogger(LoggerName.BROKER_CONSOLE_NAME);
                 MixAll.printObjectProperties(console, brokerConfig);
@@ -210,6 +214,7 @@ public class BrokerStartup {
                 MixAll.printObjectProperties(console, nettyClientConfig);
                 MixAll.printObjectProperties(console, messageStoreConfig);
                 System.exit(0);
+                // 如果命令行中包含了-m参数，打印信息到控制台
             } else if (commandLine.hasOption('m')) {
                 InternalLogger console = InternalLoggerFactory.getLogger(LoggerName.BROKER_CONSOLE_NAME);
                 MixAll.printObjectProperties(console, brokerConfig, true);
@@ -219,12 +224,15 @@ public class BrokerStartup {
                 System.exit(0);
             }
 
+            // 打印broker的配置参数
             log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
             MixAll.printObjectProperties(log, brokerConfig);
             MixAll.printObjectProperties(log, nettyServerConfig);
             MixAll.printObjectProperties(log, nettyClientConfig);
             MixAll.printObjectProperties(log, messageStoreConfig);
 
+            // 以上就是基于配置文件配置参数，命令行配置参数，默认配置参数，创建了brokerConfig等对象
+            // 这里是创建BrokerController，即Broker管理控制组件
             final BrokerController controller = new BrokerController(
                 brokerConfig,
                 nettyServerConfig,
