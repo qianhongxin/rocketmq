@@ -48,6 +48,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.rocketmq.remoting.netty.TlsSystemConfig.TLS_ENABLE;
 
+// broker的启动入口
 public class BrokerStartup {
     public static Properties properties = null;
     public static CommandLine commandLine = null;
@@ -90,16 +91,18 @@ public class BrokerStartup {
     public static BrokerController createBrokerController(String[] args) {
         System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
 
+        // 如果命令行没有设置netty发送缓冲区大小，这里默认设置
         if (null == System.getProperty(NettySystemConfig.COM_ROCKETMQ_REMOTING_SOCKET_SNDBUF_SIZE)) {
             NettySystemConfig.socketSndbufSize = 131072;
         }
-
+        // 如果命令行没有设置netty接收缓冲区大小，这里默认设置
         if (null == System.getProperty(NettySystemConfig.COM_ROCKETMQ_REMOTING_SOCKET_RCVBUF_SIZE)) {
             NettySystemConfig.socketRcvbufSize = 131072;
         }
 
         try {
             //PackageConflictDetect.detectFastjson();
+            // 判断mqbroker参数是否设置了
             Options options = ServerUtil.buildCommandlineOptions(new Options());
             commandLine = ServerUtil.parseCmdLine("mqbroker", args, buildCommandlineOptions(options),
                 new PosixParser());
@@ -107,20 +110,27 @@ public class BrokerStartup {
                 System.exit(-1);
             }
 
+            // 下面三个是broker的核心配置类，分别是broker的配置，netty的服务端配置，netty的客户端配置
+            // broker和nameserver通信就是netty客户端，producer和broker通信，broker就是netty服务端
             final BrokerConfig brokerConfig = new BrokerConfig();
             final NettyServerConfig nettyServerConfig = new NettyServerConfig();
             final NettyClientConfig nettyClientConfig = new NettyClientConfig();
 
+            // 下面是说netty客户端是否使用TLS加密机制
             nettyClientConfig.setUseTLS(Boolean.parseBoolean(System.getProperty(TLS_ENABLE,
                 String.valueOf(TlsSystemConfig.tlsMode == TlsMode.ENFORCING))));
+            // 设置netty服务器的监听端口号10911
             nettyServerConfig.setListenPort(10911);
+            // 创建broker用来存储消息的一些配置信息
             final MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
 
+            // 如果当前broker是slave节点的话，就要设置一个特殊的参数
             if (BrokerRole.SLAVE == messageStoreConfig.getBrokerRole()) {
                 int ratio = messageStoreConfig.getAccessMessageInMemoryMaxRatio() - 10;
                 messageStoreConfig.setAccessMessageInMemoryMaxRatio(ratio);
             }
 
+            // 为核心的配置类brokerConfig，nettyServerConfig，nettyClientConfig，messageStoreConfig，填充一些外部配置的信息
             if (commandLine.hasOption('c')) {
                 String file = commandLine.getOptionValue('c');
                 if (file != null) {
@@ -140,13 +150,16 @@ public class BrokerStartup {
                 }
             }
 
+            // 将命令行中的配置信息设置到brokerConfig对象中
             MixAll.properties2Object(ServerUtil.commandLine2Properties(commandLine), brokerConfig);
 
+            // 检查ROCKETMQ_HOME环境变量是否设置了，没有就退出jvm
             if (null == brokerConfig.getRocketmqHome()) {
                 System.out.printf("Please set the %s variable in your environment to match the location of the RocketMQ installation", MixAll.ROCKETMQ_HOME_ENV);
                 System.exit(-2);
             }
 
+            // 获取nameserver的地址信息，可能是存储了多个地址，是用“;”隔开的。这里做解析
             String namesrvAddr = brokerConfig.getNamesrvAddr();
             if (null != namesrvAddr) {
                 try {
@@ -162,6 +175,7 @@ public class BrokerStartup {
                 }
             }
 
+            // 判断一下当前的节点是什么角色，不同角色做一些处理
             switch (messageStoreConfig.getBrokerRole()) {
                 case ASYNC_MASTER:
                 case SYNC_MASTER:
