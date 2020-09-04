@@ -38,7 +38,7 @@ import org.apache.rocketmq.remoting.netty.NettyServerConfig;
 import org.apache.rocketmq.remoting.netty.TlsSystemConfig;
 import org.apache.rocketmq.srvutil.FileWatchService;
 
-
+// 用来接收网络请求的一个核心组件，比如producer会从这里入口拉取元数据。broker会来注册等
 public class NamesrvController {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
 
@@ -63,9 +63,13 @@ public class NamesrvController {
     public NamesrvController(NamesrvConfig namesrvConfig, NettyServerConfig nettyServerConfig) {
         this.namesrvConfig = namesrvConfig;
         this.nettyServerConfig = nettyServerConfig;
+        // 创建 KVConfigManager
         this.kvConfigManager = new KVConfigManager(this);
+        // 创建 RouteInfoManager
         this.routeInfoManager = new RouteInfoManager();
+        // 创建 BrokerHousekeepingService
         this.brokerHousekeepingService = new BrokerHousekeepingService(this);
+        // 创建 Configuration
         this.configuration = new Configuration(
             log,
             this.namesrvConfig, this.nettyServerConfig
@@ -75,15 +79,20 @@ public class NamesrvController {
 
     public boolean initialize() {
 
+        // kv管理器从磁盘加载kv配置
         this.kvConfigManager.load();
 
+        // 创建Netty网络服务器
         this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService);
 
+        // 创建netty服务器的工作线程池
         this.remotingExecutor =
             Executors.newFixedThreadPool(nettyServerConfig.getServerWorkerThreads(), new ThreadFactoryImpl("RemotingExecutorThread_"));
 
+        // 把工作线程池注册给netty服务器
         this.registerProcessor();
 
+        // 启动一个定时任务，定时扫描所有的broker，看哪些broker没有心跳挂掉了
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -92,6 +101,7 @@ public class NamesrvController {
             }
         }, 5, 10, TimeUnit.SECONDS);
 
+        // 定时任务，定时打印kv的配置信息到控制台
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -100,6 +110,7 @@ public class NamesrvController {
             }
         }, 1, 10, TimeUnit.MINUTES);
 
+        // 下面是和FileWatch相关的
         if (TlsSystemConfig.tlsMode != TlsMode.DISABLED) {
             // Register a listener to reload SslContext
             try {
@@ -153,6 +164,7 @@ public class NamesrvController {
     }
 
     public void start() throws Exception {
+        // 启动netty服务器
         this.remotingServer.start();
 
         if (this.fileWatchService != null) {
@@ -161,6 +173,7 @@ public class NamesrvController {
     }
 
     public void shutdown() {
+        // 释放资源
         this.remotingServer.shutdown();
         this.remotingExecutor.shutdown();
         this.scheduledExecutorService.shutdown();
