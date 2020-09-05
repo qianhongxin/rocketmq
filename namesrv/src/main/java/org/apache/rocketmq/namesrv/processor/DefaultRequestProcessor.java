@@ -66,10 +66,12 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         this.namesrvController = namesrvController;
     }
 
+    // 处理nameserver接受到的网络请求，比如注册，拉取元数据等
     @Override
     public RemotingCommand processRequest(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
 
+        // 打印调试日志的
         if (ctx != null) {
             log.debug("receive request, {} {} {}",
                 request.getCode(),
@@ -77,7 +79,7 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
                 request);
         }
 
-
+        // 核心流程，根据你的请求类型有不同的处理流程
         switch (request.getCode()) {
             case RequestCode.PUT_KV_CONFIG:
                 return this.putKVConfig(ctx, request);
@@ -87,11 +89,13 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
                 return this.deleteKVConfig(ctx, request);
             case RequestCode.QUERY_DATA_VERSION:
                 return queryBrokerTopicConfig(ctx, request);
+                // 处理broker的注册请求
             case RequestCode.REGISTER_BROKER:
                 Version brokerVersion = MQVersion.value2Version(request.getVersion());
                 if (brokerVersion.ordinal() >= MQVersion.Version.V3_0_11.ordinal()) {
                     return this.registerBrokerWithFilterServer(ctx, request);
                 } else {
+                    // 核心的注册请求处理逻辑
                     return this.registerBroker(ctx, request);
                 }
             case RequestCode.UNREGISTER_BROKER:
@@ -274,9 +278,11 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    // 处理broker的注册请求
     public RemotingCommand registerBroker(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(RegisterBrokerResponseHeader.class);
+        // 下面一大坨代码就是解析注册请求，返回注册响应的
         final RegisterBrokerResponseHeader responseHeader = (RegisterBrokerResponseHeader) response.readCustomHeader();
         final RegisterBrokerRequestHeader requestHeader =
             (RegisterBrokerRequestHeader) request.decodeCommandCustomHeader(RegisterBrokerRequestHeader.class);
@@ -296,6 +302,9 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
             topicConfigWrapper.getDataVersion().setTimestamp(0);
         }
 
+        // 核心其实在这里，调用RouteInfoManager这个核心功能组件
+        // RouteInfoManager是路由信息管理组件，它是一个功能组件
+        // 调用这个功能组件的注册broker的方法
         RegisterBrokerResult result = this.namesrvController.getRouteInfoManager().registerBroker(
             requestHeader.getClusterName(),
             requestHeader.getBrokerAddr(),
@@ -307,6 +316,7 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
             ctx.channel()
         );
 
+        // 下面就是在构造返回的响应了
         responseHeader.setHaServerAddr(result.getHaServerAddr());
         responseHeader.setMasterAddr(result.getMasterAddr());
 

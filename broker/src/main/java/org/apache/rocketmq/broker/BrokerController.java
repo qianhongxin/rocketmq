@@ -942,7 +942,7 @@ public class BrokerController {
             this.registerBrokerAll(true, false, true);
         }
 
-        // 去往所有的nameserver节点进行注册
+        // 去往所有的nameserver节点进行注册，每30s注册一次，nameserver对第一次之后的注册就算心跳
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -986,8 +986,10 @@ public class BrokerController {
     }
 
     public synchronized void registerBrokerAll(final boolean checkOrderConfig, boolean oneway, boolean forceRegister) {
+        // Topic配置相关的信息
         TopicConfigSerializeWrapper topicConfigWrapper = this.getTopicConfigManager().buildTopicConfigSerializeWrapper();
 
+        // 下面一坨就是在高TopicConfig的东西
         if (!PermName.isWriteable(this.getBrokerConfig().getBrokerPermission())
             || !PermName.isReadable(this.getBrokerConfig().getBrokerPermission())) {
             ConcurrentHashMap<String, TopicConfig> topicConfigTable = new ConcurrentHashMap<String, TopicConfig>();
@@ -1000,6 +1002,7 @@ public class BrokerController {
             topicConfigWrapper.setTopicConfigTable(topicConfigTable);
         }
 
+        // 下面是判断是否要注册，如果要注册，就调用doRegisterBrokerAll方法进行注册
         if (forceRegister || needRegister(this.brokerConfig.getBrokerClusterName(),
             this.getBrokerAddr(),
             this.brokerConfig.getBrokerName(),
@@ -1011,6 +1014,8 @@ public class BrokerController {
 
     private void doRegisterBrokerAll(boolean checkOrderConfig, boolean oneway,
         TopicConfigSerializeWrapper topicConfigWrapper) {
+        // 这是最最核心的注册调用
+        // 利用brokerOuterAPI完成注册，在这里就完成了注册，而且是注册给所有nameserver节点，所以返回值是个list
         List<RegisterBrokerResult> registerBrokerResultList = this.brokerOuterAPI.registerBrokerAll(
             this.brokerConfig.getBrokerClusterName(),
             this.getBrokerAddr(),

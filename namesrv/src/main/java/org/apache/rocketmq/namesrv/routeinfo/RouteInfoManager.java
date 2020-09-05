@@ -50,8 +50,11 @@ public class RouteInfoManager {
     private final static long BROKER_CHANNEL_EXPIRED_TIME = 1000 * 60 * 2;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private final HashMap<String/* topic */, List<QueueData>> topicQueueTable;
+    // 存储brokername和broker的映射关系
     private final HashMap<String/* brokerName */, BrokerData> brokerAddrTable;
+    // 维护一个集群有哪些broker存在的set集合数据结构
     private final HashMap<String/* clusterName */, Set<String/* brokerName */>> clusterAddrTable;
+    // 存储brokerAddr和心跳数据结构BrokerLiveInfo的对印关系
     private final HashMap<String/* brokerAddr */, BrokerLiveInfo> brokerLiveTable;
     private final HashMap<String/* brokerAddr */, List<String>/* Filter Server */> filterServerTable;
 
@@ -99,6 +102,7 @@ public class RouteInfoManager {
         return topicList.encode();
     }
 
+    // 处理注册broker的逻辑  fixme
     public RegisterBrokerResult registerBroker(
         final String clusterName,
         final String brokerAddr,
@@ -111,23 +115,41 @@ public class RouteInfoManager {
         RegisterBrokerResult result = new RegisterBrokerResult();
         try {
             try {
+                // 加写锁，同一时间只有一个线程能执行锁中代码
                 this.lock.writeLock().lockInterruptibly();
 
+                // 根据clusterName获取一个brokerName的set集合
                 Set<String> brokerNames = this.clusterAddrTable.get(clusterName);
                 if (null == brokerNames) {
+                    // 不存在时创建集合
                     brokerNames = new HashSet<String>();
+                    // put到clusterAddrTable中
                     this.clusterAddrTable.put(clusterName, brokerNames);
                 }
+                // brokerName的名字放入brokerNames。
+                // 这是在维护一个集群有哪些broker存在的set集合数据结构
+                // 假设broker是每30s注册一次，这里也没事，因为set集合去重了
                 brokerNames.add(brokerName);
 
+                // 是否第一次注册
                 boolean registerFirst = false;
 
+                // 根据brokerName获取到BrokerData
+                // 使用brokerAddrTable作为核心路由数据表
+                // 这里存放了所有的broker的详细的路由数据
                 BrokerData brokerData = this.brokerAddrTable.get(brokerName);
+
+                // 如果是第一次发送注册请求，这个brokerData肯定是null
+                // 然后就是创建一个brokerData放入到brokerAddrTable这个路由数据表中
+                // 其实这个就是核心的Broker注册过程
+
+                // 如果后续每隔30秒发送的注册请求，到这里就不是null了，并不会重复处理注册，直接当作心跳了
                 if (null == brokerData) {
                     registerFirst = true;
                     brokerData = new BrokerData(clusterName, brokerName, new HashMap<Long, String>());
                     this.brokerAddrTable.put(brokerName, brokerData);
                 }
+                // 下面是对路由数据的一些处理
                 Map<Long, String> brokerAddrsMap = brokerData.getBrokerAddrs();
                 //Switch slave to master: first remove <1, IP:PORT> in namesrv, then add <0, IP:PORT>
                 //The same IP:PORT must only have one record in brokerAddrTable
@@ -156,6 +178,11 @@ public class RouteInfoManager {
                     }
                 }
 
+                // 比较核心的在这里，这里是处理每隔30s发送的注册请求当作心跳请求
+                // 最核心的处理逻辑：每次心跳来的时候都是封装一个新的BrokerLiveInfo放入brokerLiveTable。
+                //                所以每次心跳来的时候，最新的BrokerLiveInfo都会覆盖上一次BrokerLiveInfo
+                //                这个BrokerLiveInfo里有一个当前时间，代表你最近一次更新时间
+                // 这就是broker每隔30s发送注册请求作为心跳请求的原理
                 BrokerLiveInfo prevBrokerLiveInfo = this.brokerLiveTable.put(brokerAddr,
                     new BrokerLiveInfo(
                         System.currentTimeMillis(),
@@ -166,6 +193,7 @@ public class RouteInfoManager {
                     log.info("new broker registered, {} HAServer: {}", brokerAddr, haServerAddr);
                 }
 
+                // 这些代码先不管
                 if (filterServerList != null) {
                     if (filterServerList.isEmpty()) {
                         this.filterServerTable.remove(brokerAddr);
@@ -426,15 +454,19 @@ public class RouteInfoManager {
         return null;
     }
 
+    // 每隔10s，处理没有心跳的故障Broker
     public void scanNotActiveBroker() {
+        // 遍历心跳数据结构brokerLiveTable，处理每个broker的心跳时间，判断是否故障
         Iterator<Entry<String, BrokerLiveInfo>> it = this.brokerLiveTable.entrySet().iterator();
         while (it.hasNext()) {
             Entry<String, BrokerLiveInfo> next = it.next();
             long last = next.getValue().getLastUpdateTimestamp();
+            // 条件成立： 当前时间距离上一次心跳时间超过心跳超时时间即120s，也就是说broker超过2min没发心跳就认为他死掉了
             if ((last + BROKER_CHANNEL_EXPIRED_TIME) < System.currentTimeMillis()) {
                 RemotingUtil.closeChannel(next.getValue().getChannel());
                 it.remove();
                 log.warn("The broker channel expired, {} {}ms", next.getKey(), BROKER_CHANNEL_EXPIRED_TIME);
+                // 这里会把broker从路由数据表里删除
                 this.onChannelDestroy(next.getKey(), next.getValue().getChannel());
             }
         }
