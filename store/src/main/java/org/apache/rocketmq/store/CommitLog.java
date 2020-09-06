@@ -552,6 +552,7 @@ public class CommitLog {
 
     public PutMessageResult putMessage(final MessageExtBrokerInner msg) {
         // Set the storage time
+        // 设置消息存入磁盘时间
         msg.setStoreTimestamp(System.currentTimeMillis());
         // Set the message body BODY CRC (consider the most appropriate setting
         // on the client)
@@ -601,6 +602,7 @@ public class CommitLog {
         MappedFile unlockMappedFile = null;
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
 
+        // 互斥锁，所有的messageQueue共享一把锁，串行写入消息到磁盘
         putMessageLock.lock(); //spin or ReentrantLock ,depending on store config
         try {
             long beginLockTimestamp = this.defaultMessageStore.getSystemClock().now();
@@ -633,6 +635,7 @@ public class CommitLog {
                         beginTimeInLock = 0;
                         return new PutMessageResult(PutMessageStatus.CREATE_MAPEDFILE_FAILED, result);
                     }
+                    // 写入到commitLog文件
                     result = mappedFile.appendMessage(msg, this.appendMessageCallback);
                     break;
                 case MESSAGE_SIZE_EXCEEDED:
@@ -667,7 +670,9 @@ public class CommitLog {
         storeStatsService.getSinglePutMessageTopicTimesTotal(msg.getTopic()).incrementAndGet();
         storeStatsService.getSinglePutMessageTopicSizeTotal(topic).addAndGet(result.getWroteBytes());
 
+        // 处理刷盘策略
         handleDiskFlush(result, putMessageResult, msg);
+        // 处理高可用，即复制
         handleHA(result, putMessageResult, msg);
 
         return putMessageResult;
@@ -675,6 +680,7 @@ public class CommitLog {
 
     public void handleDiskFlush(AppendMessageResult result, PutMessageResult putMessageResult, MessageExt messageExt) {
         // Synchronization flush
+        // 同步刷盘
         if (FlushDiskType.SYNC_FLUSH == this.defaultMessageStore.getMessageStoreConfig().getFlushDiskType()) {
             final GroupCommitService service = (GroupCommitService) this.flushCommitLogService;
             if (messageExt.isWaitStoreMsgOK()) {
@@ -691,6 +697,7 @@ public class CommitLog {
             }
         }
         // Asynchronous flush
+        // 异步刷盘
         else {
             if (!this.defaultMessageStore.getMessageStoreConfig().isTransientStorePoolEnable()) {
                 flushCommitLogService.wakeup();
@@ -827,8 +834,9 @@ public class CommitLog {
         storeStatsService.getSinglePutMessageTopicTimesTotal(messageExtBatch.getTopic()).addAndGet(result.getMsgNum());
         storeStatsService.getSinglePutMessageTopicSizeTotal(messageExtBatch.getTopic()).addAndGet(result.getWroteBytes());
 
+        // 处理刷盘策略
         handleDiskFlush(result, putMessageResult, messageExtBatch);
-
+        // 处理高可用策略
         handleHA(result, putMessageResult, messageExtBatch);
 
         return putMessageResult;

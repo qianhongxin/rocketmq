@@ -198,6 +198,15 @@ public class IndexService {
         return topic + "#" + key;
     }
 
+    // IndexFile是对commitlog所有msg的索引文件，可以直接根据topic+msgId查具体的msg。consumequeue对应的是同一个topic的消息拉取。使用场景是不一样的
+    //
+    // IndexFile的存储结构可以认为是一个hashmap。topic+key生成的hashcode%slotnums映射到具体的slottable里。slottable里存的slotvalue是当前hashcode对应的offset的位置索引
+    //（pos= IndexHeader.INDEX_HEADER_SIZE + this.hashSlotNum* hashSlotSize + slotvalue * indexSize）。因为slotnums有500W所以哈希冲突的概率是很小的。但也会有。
+
+    // 如果我们需要根据消息ID，来查找消息，consumequeue 中没有存储消息ID,如果不采取其他措施，
+    // 又得遍历 commitlog文件了，indexFile就是为了解决这个问题的文件
+
+    // https://www.cnblogs.com/zxporz/p/12336476.html
     public void buildIndex(DispatchRequest req) {
         IndexFile indexFile = retryGetAndCreateIndexFile();
         if (indexFile != null) {

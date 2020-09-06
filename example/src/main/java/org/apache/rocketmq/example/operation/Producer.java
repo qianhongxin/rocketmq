@@ -39,18 +39,23 @@ public class Producer {
             String keys = commandLine.getOptionValue('k');
             String msgCount = commandLine.getOptionValue('c');
 
+            // 创建一个DefaultMQProducer，并传入一个分组
             DefaultMQProducer producer = new DefaultMQProducer(group);
+            // 给producer指定一个名字
             producer.setInstanceName(Long.toString(System.currentTimeMillis()));
 
+            // 核心，启动producer
             producer.start();
 
             for (int i = 0; i < Integer.parseInt(msgCount); i++) {
                 try {
+                    // 构造message
                     Message msg = new Message(
                         topic,
                         tags,
                         keys,
                         ("Hello RocketMQ " + i).getBytes(RemotingHelper.DEFAULT_CHARSET));
+                    // 发送message
                     SendResult sendResult = producer.send(msg);
                     System.out.printf("%-8d %s%n", i, sendResult);
                 } catch (Exception e) {
@@ -59,6 +64,7 @@ public class Producer {
                 }
             }
 
+            // 关闭，释放资源
             producer.shutdown();
         }
     }

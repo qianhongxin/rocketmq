@@ -257,6 +257,7 @@ public class DefaultMessageStore implements MessageStore {
             log.info("[SetReputOffset] maxPhysicalPosInLogicQueue={} clMinOffset={} clMaxOffset={} clConfirmedOffset={}",
                 maxPhysicalPosInLogicQueue, this.commitLog.getMinOffset(), this.commitLog.getMaxOffset(), this.commitLog.getConfirmOffset());
             this.reputMessageService.setReputFromOffset(maxPhysicalPosInLogicQueue);
+            // 每隔1ms将将写入到commitLog的消息分发写入到consumeQueue和indexFile中建立索引，方便查询
             this.reputMessageService.start();
 
             /**
@@ -352,11 +353,13 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     public PutMessageResult putMessage(MessageExtBrokerInner msg) {
+        // 消息存储功能关闭标示
         if (this.shutdown) {
             log.warn("message store has shutdown, so putMessage is forbidden");
             return new PutMessageResult(PutMessageStatus.SERVICE_NOT_AVAILABLE, null);
         }
 
+        // 从节点不允许接受消息的判断
         if (BrokerRole.SLAVE == this.messageStoreConfig.getBrokerRole()) {
             long value = this.printTimes.getAndIncrement();
             if ((value % 50000) == 0) {
@@ -366,6 +369,7 @@ public class DefaultMessageStore implements MessageStore {
             return new PutMessageResult(PutMessageStatus.SERVICE_NOT_AVAILABLE, null);
         }
 
+        // 消息存储功能是否可写的标示
         if (!this.runningFlags.isWriteable()) {
             long value = this.printTimes.getAndIncrement();
             if ((value % 50000) == 0) {
@@ -377,21 +381,25 @@ public class DefaultMessageStore implements MessageStore {
             this.printTimes.set(0);
         }
 
+        // 消息topic长度校验，防止人为修改包的数据导致异常
         if (msg.getTopic().length() > Byte.MAX_VALUE) {
             log.warn("putMessage message topic length too long " + msg.getTopic().length());
             return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
         }
 
+        // properties长度校验
         if (msg.getPropertiesString() != null && msg.getPropertiesString().length() > Short.MAX_VALUE) {
             log.warn("putMessage message properties length too long " + msg.getPropertiesString().length());
             return new PutMessageResult(PutMessageStatus.PROPERTIES_SIZE_EXCEEDED, null);
         }
 
+        // 判断oscache是否繁忙
         if (this.isOSPageCacheBusy()) {
             return new PutMessageResult(PutMessageStatus.OS_PAGECACHE_BUSY, null);
         }
 
         long beginTime = this.getSystemClock().now();
+        // 写入消息到磁盘
         PutMessageResult result = this.commitLog.putMessage(msg);
 
         long elapsedTime = this.getSystemClock().now() - beginTime;
@@ -1222,6 +1230,8 @@ public class DefaultMessageStore implements MessageStore {
 
     private void addScheduleTask() {
 
+        //每隔10s执行以下调度任务，清理过期数据，减轻磁盘压力
+        // 清理的是commitLog文件和ConsumeQueue文件
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
