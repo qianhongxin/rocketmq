@@ -30,6 +30,7 @@ import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
 import org.apache.rocketmq.remoting.RPCHook;
 
+// 客户端拉取消息，拉到就返回，没有也返回
 public class DefaultLitePullConsumer extends ClientConfig implements LitePullConsumer {
 
     private final DefaultLitePullConsumerImpl defaultLitePullConsumerImpl;

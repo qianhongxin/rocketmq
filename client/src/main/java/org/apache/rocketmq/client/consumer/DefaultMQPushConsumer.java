@@ -60,6 +60,8 @@ import org.apache.rocketmq.remoting.exception.RemotingException;
  * <strong>Thread Safety:</strong> After initialization, the instance can be regarded as thread-safe.
  * </p>
  */
+// 消息拉取实时性比较好，也是通过客户端拉取，服务端有消息就返回，么有就夯住15s等消息再返回。
+// 所以这种 push 本质也是客户端拉取
 public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsumer {
 
     private final InternalLogger log = ClientLogger.getLog();
