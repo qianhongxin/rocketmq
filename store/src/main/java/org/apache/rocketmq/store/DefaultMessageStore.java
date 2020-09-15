@@ -197,6 +197,7 @@ public class DefaultMessageStore implements MessageStore {
                 this.storeCheckpoint =
                     new StoreCheckpoint(StorePathConfigHelper.getStoreCheckpoint(this.messageStoreConfig.getStorePathRootDir()));
 
+                // index file
                 this.indexService.load(lastExitOK);
 
                 this.recover(lastExitOK);

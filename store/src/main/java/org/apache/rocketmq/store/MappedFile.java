@@ -162,7 +162,7 @@ public class MappedFile extends ReferenceResource {
         try {
             // 利用随机读写文件包装file，然后返回持有的FileChannel
             this.fileChannel = new RandomAccessFile(this.file, "rw").getChannel();
-            // 利用FileChannel将关联的fd指向的文件和内存做一个映射，返回MappedByteBuffer对象
+            // 利用 FileChannel 将关联的 fd 指向的文件和内存做一个映射，返回 MappedByteBuffer 对象
             this.mappedByteBuffer = this.fileChannel.map(MapMode.READ_WRITE, 0, fileSize);
             // 增加内存消耗值
             TOTAL_MAPPED_VIRTUAL_MEMORY.addAndGet(fileSize);

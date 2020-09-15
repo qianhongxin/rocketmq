@@ -53,6 +53,8 @@ import org.apache.rocketmq.store.schedule.ScheduleMessageService;
 /**
  * Store all metadata downtime for recovery, data protection reliability
  */
+// 底层基于raft的类库Dledger技术实现的leader选举机制保障高可用
+// https://github.com/qianhongxin/openmessaging-storage-dledger
 public class DLedgerCommitLog extends CommitLog {
     private final DLedgerServer dLedgerServer;
     private final DLedgerConfig dLedgerConfig;
