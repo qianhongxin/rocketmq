@@ -180,14 +180,17 @@ public class DefaultMessageStore implements MessageStore {
             boolean lastExitOK = !this.isTempFileExist();
             log.info("last shutdown {}", lastExitOK ? "normally" : "abnormally");
 
+            // 如果配置了异步加载，执行异步加载
             if (null != scheduleMessageService) {
                 result = result && this.scheduleMessageService.load();
             }
 
             // load Commit Log
+            // 同步加载 Commit Log
             result = result && this.commitLog.load();
 
             // load Consume Queue
+            // 同步加载 Consume Queue
             result = result && this.loadConsumeQueue();
 
             if (result) {
@@ -416,11 +419,13 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     public PutMessageResult putMessages(MessageExtBatch messageExtBatch) {
+        // 判断机器是否是优雅关机状态
         if (this.shutdown) {
             log.warn("DefaultMessageStore has shutdown, so putMessages is forbidden");
             return new PutMessageResult(PutMessageStatus.SERVICE_NOT_AVAILABLE, null);
         }
 
+        // 如果当前是从节点，返回不可写错误
         if (BrokerRole.SLAVE == this.messageStoreConfig.getBrokerRole()) {
             long value = this.printTimes.getAndIncrement();
             if ((value % 50000) == 0) {
@@ -430,6 +435,7 @@ public class DefaultMessageStore implements MessageStore {
             return new PutMessageResult(PutMessageStatus.SERVICE_NOT_AVAILABLE, null);
         }
 
+        // 判断节点是否可写
         if (!this.runningFlags.isWriteable()) {
             long value = this.printTimes.getAndIncrement();
             if ((value % 50000) == 0) {
@@ -441,21 +447,26 @@ public class DefaultMessageStore implements MessageStore {
             this.printTimes.set(0);
         }
 
+        // 判断当前请求要写入的topic的长度是否超过Byte.MAX_VALUE
         if (messageExtBatch.getTopic().length() > Byte.MAX_VALUE) {
             log.warn("PutMessages topic length too long " + messageExtBatch.getTopic().length());
             return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
         }
 
+        // 判断当前请求数据是否超过最大数据限制
         if (messageExtBatch.getBody().length > messageStoreConfig.getMaxMessageSize()) {
             log.warn("PutMessages body length too long " + messageExtBatch.getBody().length);
             return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
         }
 
+        // 判断os cache是否繁忙
         if (this.isOSPageCacheBusy()) {
             return new PutMessageResult(PutMessageStatus.OS_PAGECACHE_BUSY, null);
         }
 
+        // 获取系统时间
         long beginTime = this.getSystemClock().now();
+        // 将数据写入commitLog文件中
         PutMessageResult result = this.commitLog.putMessages(messageExtBatch);
 
         long elapsedTime = this.getSystemClock().now() - beginTime;
@@ -465,6 +476,7 @@ public class DefaultMessageStore implements MessageStore {
         this.storeStatsService.setPutMessageEntireTimeMax(elapsedTime);
 
         if (null == result || !result.isOk()) {
+            // 失败统计
             this.storeStatsService.getPutMessageFailedTimes().incrementAndGet();
         }
 

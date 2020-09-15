@@ -505,7 +505,9 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             return response;
         }
 
+        // 获取队列id
         int queueIdInt = requestHeader.getQueueId();
+        // 查找topic
         TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(requestHeader.getTopic());
 
         if (queueIdInt < 0) {
@@ -523,6 +525,8 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             response.setRemark("batch request does not support retry group " + requestHeader.getTopic());
             return response;
         }
+
+        // 将接收到的数据封装成MessageExtBatch格式
         MessageExtBatch messageExtBatch = new MessageExtBatch();
         messageExtBatch.setTopic(requestHeader.getTopic());
         messageExtBatch.setQueueId(queueIdInt);

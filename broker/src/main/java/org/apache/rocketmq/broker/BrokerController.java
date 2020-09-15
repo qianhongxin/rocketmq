@@ -277,6 +277,7 @@ public class BrokerController {
             }
         }
 
+        // 将commitlog和consumelog数据加载到内存映射文件中
         result = result && this.messageStore.load();
 
         if (result) {

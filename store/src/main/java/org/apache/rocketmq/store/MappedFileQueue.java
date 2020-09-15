@@ -35,8 +35,10 @@ public class MappedFileQueue {
 
     private static final int DELETE_FILES_BATCH_MAX = 10;
 
+    // storePath是consumeQueue或commitLog的文件所在的目录
     private final String storePath;
 
+    // 如果是CommitLog的话，该值是1G
     private final int mappedFileSize;
 
     private final CopyOnWriteArrayList<MappedFile> mappedFiles = new CopyOnWriteArrayList<MappedFile>();
@@ -144,14 +146,19 @@ public class MappedFileQueue {
         }
     }
 
+    // 将磁盘的commitlog文件加载到内存中
     public boolean load() {
+        // storePath是consumeQueue或commitLog的文件所在的目录
         File dir = new File(this.storePath);
+        // 拿到目录下的所有文件
         File[] files = dir.listFiles();
         if (files != null) {
             // ascending order
+            // 根据文件名排序
             Arrays.sort(files);
             for (File file : files) {
-
+                // 如果是commitlog，则mappedFileSize默认是1G。
+                // 判断file的长度，如果不是1G的话，说明创建该文件时就有问题，需要报错。文件长度是创建时指定的，记录在文件描述信息中
                 if (file.length() != this.mappedFileSize) {
                     log.warn(file + "\t" + file.length()
                         + " length not matched message store config value, please check it manually");
@@ -159,6 +166,7 @@ public class MappedFileQueue {
                 }
 
                 try {
+
                     MappedFile mappedFile = new MappedFile(file.getPath(), mappedFileSize);
 
                     mappedFile.setWrotePosition(this.mappedFileSize);

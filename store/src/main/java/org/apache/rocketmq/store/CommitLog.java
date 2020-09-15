@@ -63,9 +63,12 @@ public class CommitLog {
     protected volatile long confirmOffset = -1L;
 
     private volatile long beginTimeInLock = 0;
+    // rocketmq定义的锁，底层是互斥锁或乐观锁实现
     protected final PutMessageLock putMessageLock;
 
     public CommitLog(final DefaultMessageStore defaultMessageStore) {
+        // defaultMessageStore.getMessageStoreConfig().getStorePathCommitLog()：commitlog的磁盘目录
+        // defaultMessageStore.getMessageStoreConfig().getMappedFileSizeCommitLog()：默认是1G
         this.mappedFileQueue = new MappedFileQueue(defaultMessageStore.getMessageStoreConfig().getStorePathCommitLog(),
             defaultMessageStore.getMessageStoreConfig().getMappedFileSizeCommitLog(), defaultMessageStore.getAllocateMappedFileService());
         this.defaultMessageStore = defaultMessageStore;
@@ -96,6 +99,7 @@ public class CommitLog {
     }
 
     public void start() {
+        // 启动刷commitlog到磁盘的任务
         this.flushCommitLogService.start();
 
         if (defaultMessageStore.getMessageStoreConfig().isTransientStorePoolEnable()) {
@@ -768,6 +772,7 @@ public class CommitLog {
 
         messageExtBatch.setEncodedBuff(batchEncoder.encode(messageExtBatch));
 
+        // 因为当前机器的上CommitLog文件是所有topic共享的，所以需要加独占锁
         putMessageLock.lock();
         try {
             long beginLockTimestamp = this.defaultMessageStore.getSystemClock().now();
@@ -775,6 +780,7 @@ public class CommitLog {
 
             // Here settings are stored timestamp, in order to ensure an orderly
             // global
+            // 设置消息落盘时间
             messageExtBatch.setStoreTimestamp(beginLockTimestamp);
 
             if (null == mappedFile || mappedFile.isFull()) {

@@ -41,6 +41,7 @@ import org.apache.rocketmq.store.config.FlushDiskType;
 import org.apache.rocketmq.store.util.LibC;
 import sun.nio.ch.DirectBuffer;
 
+// rocket对mmap的封装，方便操作内存映射文件
 public class MappedFile extends ReferenceResource {
     public static final int OS_PAGE_SIZE = 1024 * 4;
     protected static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
@@ -151,6 +152,7 @@ public class MappedFile extends ReferenceResource {
     private void init(final String fileName, final int fileSize) throws IOException {
         this.fileName = fileName;
         this.fileSize = fileSize;
+        // 创建文件
         this.file = new File(fileName);
         this.fileFromOffset = Long.parseLong(this.file.getName());
         boolean ok = false;
@@ -158,9 +160,13 @@ public class MappedFile extends ReferenceResource {
         ensureDirOK(this.file.getParent());
 
         try {
+            // 利用随机读写文件包装file，然后返回持有的FileChannel
             this.fileChannel = new RandomAccessFile(this.file, "rw").getChannel();
+            // 利用FileChannel将关联的fd指向的文件和内存做一个映射，返回MappedByteBuffer对象
             this.mappedByteBuffer = this.fileChannel.map(MapMode.READ_WRITE, 0, fileSize);
+            // 增加内存消耗值
             TOTAL_MAPPED_VIRTUAL_MEMORY.addAndGet(fileSize);
+            // 增加mapped file的数量
             TOTAL_MAPPED_FILES.incrementAndGet();
             ok = true;
         } catch (FileNotFoundException e) {
@@ -170,6 +176,7 @@ public class MappedFile extends ReferenceResource {
             log.error("Failed to map file " + this.fileName, e);
             throw e;
         } finally {
+            // 出现异常则关闭文件通道，关闭文件
             if (!ok && this.fileChannel != null) {
                 this.fileChannel.close();
             }
