@@ -62,6 +62,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         super(brokerController);
     }
 
+    // 处理请求
     @Override
     public RemotingCommand processRequest(ChannelHandlerContext ctx,
                                           RemotingCommand request) throws RemotingCommandException {
@@ -70,21 +71,26 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             case RequestCode.CONSUMER_SEND_MSG_BACK:
                 return this.consumerSendMsgBack(ctx, request);
             default:
+                // 解析请求header信息，封装到 SendMessageRequestHeader
                 SendMessageRequestHeader requestHeader = parseRequestHeader(request);
                 if (requestHeader == null) {
                     return null;
                 }
 
+                // 封装请求信息到 SendMessageContext
                 mqtraceContext = buildMsgContext(ctx, requestHeader);
+                // 发送消息前执行钩子
                 this.executeSendMessageHookBefore(ctx, request, mqtraceContext);
 
                 RemotingCommand response;
                 if (requestHeader.isBatch()) {
+                    // 批量消息发送
                     response = this.sendBatchMessage(ctx, request, mqtraceContext, requestHeader);
                 } else {
+                    // 单个消息
                     response = this.sendMessage(ctx, request, mqtraceContext, requestHeader);
                 }
-
+                // 发送消息后执行钩子
                 this.executeSendMessageHookAfter(response, mqtraceContext);
                 return response;
         }
@@ -299,7 +305,6 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                                         final RemotingCommand request,
                                         final SendMessageContext sendMessageContext,
                                         final SendMessageRequestHeader requestHeader) throws RemotingCommandException {
-
         final RemotingCommand response = RemotingCommand.createResponseCommand(SendMessageResponseHeader.class);
         final SendMessageResponseHeader responseHeader = (SendMessageResponseHeader)response.readCustomHeader();
 
@@ -310,6 +315,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
 
         log.debug("receive SendMessage request command, {}", request);
 
+        // 时钟判断，防止系统时钟异常错误
         final long startTimstamp = this.brokerController.getBrokerConfig().getStartAcceptSendRequestTimeStamp();
         if (this.brokerController.getMessageStore().now() < startTimstamp) {
             response.setCode(ResponseCode.SYSTEM_ERROR);
@@ -317,6 +323,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             return response;
         }
 
+        // 消息数据校验
         response.setCode(-1);
         super.msgCheck(ctx, requestHeader, response);
         if (response.getCode() != -1) {
@@ -332,6 +339,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             queueIdInt = Math.abs(this.random.nextInt() % 99999999) % topicConfig.getWriteQueueNums();
         }
 
+        // 构造MessageExtBrokerInner对象，将消息相关数据塞进去
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
         msgInner.setTopic(requestHeader.getTopic());
         msgInner.setQueueId(queueIdInt);
@@ -350,11 +358,16 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         String clusterName = this.brokerController.getBrokerConfig().getBrokerClusterName();
         MessageAccessor.putProperty(msgInner, MessageConst.PROPERTY_CLUSTER, clusterName);
         msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
+
+        // 消息存储结果
         PutMessageResult putMessageResult = null;
+        // 从producer发送的消息中获取事务标识是否开启，即判断是否是事务消息
         Map<String, String> oriProps = MessageDecoder.string2messageProperties(requestHeader.getProperties());
         String traFlag = oriProps.get(MessageConst.PROPERTY_TRANSACTION_PREPARED);
         if (traFlag != null && Boolean.parseBoolean(traFlag)) {
+            // 判断broker端是否开启事务消息开关
             if (this.brokerController.getBrokerConfig().isRejectTransactionMessage()) {
+                // 返回拒绝接收事务消息的响应
                 response.setCode(ResponseCode.NO_PERMISSION);
                 response.setRemark(
                     "the broker[" + this.brokerController.getBrokerConfig().getBrokerIP1()

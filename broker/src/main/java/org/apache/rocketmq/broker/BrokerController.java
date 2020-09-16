@@ -131,6 +131,7 @@ public class BrokerController {
     private final SubscriptionGroupManager subscriptionGroupManager;
     private final ConsumerIdsChangeListener consumerIdsChangeListener;
     private final RebalanceLockManager rebalanceLockManager = new RebalanceLockManager();
+    // 访问集群其他broker，nameserver的api的逻辑封装
     private final BrokerOuterAPI brokerOuterAPI;
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl(
         "BrokerControllerScheduledThread"));
@@ -145,9 +146,12 @@ public class BrokerController {
     private final BlockingQueue<Runnable> endTransactionThreadPoolQueue;
     private final FilterServerManager filterServerManager;
     private final BrokerStatsManager brokerStatsManager;
+    // 服务端消息发送钩子，用于扩展的，目前版本还未使用
     private final List<SendMessageHook> sendMessageHookList = new ArrayList<SendMessageHook>();
+    // 服务端消息消费钩子，用于扩展的，目前版本还未使用
     private final List<ConsumeMessageHook> consumeMessageHookList = new ArrayList<ConsumeMessageHook>();
     private MessageStore messageStore;
+    // broker需要接受producer和从consumer的拉取请求的，所以broker必然有netty的服务器的，这里就是创建netty服务器，基于Netty做NIO通信
     private RemotingServer remotingServer;
     private RemotingServer fastRemotingServer;
     private TopicConfigManager topicConfigManager;
@@ -282,7 +286,7 @@ public class BrokerController {
 
         if (result) {
             // 关键地方
-            // broker需要接受producer和从consumer的拉取请求的，所以broker必然有netty的服务器的，这里就是创建netty服务器
+            // broker需要接受producer和从consumer的拉取请求的，所以broker必然有netty的服务器的，这里就是创建netty服务器，基于Netty做NIO通信
             this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.clientHousekeepingService);
             NettyServerConfig fastConfig = (NettyServerConfig) this.nettyServerConfig.clone();
             fastConfig.setListenPort(nettyServerConfig.getListenPort() - 2);
@@ -601,6 +605,8 @@ public class BrokerController {
         SendMessageProcessor sendProcessor = new SendMessageProcessor(this);
         sendProcessor.registerSendMessageHook(sendMessageHookList);
         sendProcessor.registerConsumeMessageHook(consumeMessageHookList);
+
+        // 给remotingServer，fastRemotingServer注册各种请求对应的处理器
 
         this.remotingServer.registerProcessor(RequestCode.SEND_MESSAGE, sendProcessor, this.sendMessageExecutor);
         this.remotingServer.registerProcessor(RequestCode.SEND_MESSAGE_V2, sendProcessor, this.sendMessageExecutor);

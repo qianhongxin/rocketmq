@@ -105,6 +105,7 @@ public class ReplyMessageProcessor extends AbstractSendMessageProcessor implemen
         response.addExtField(MessageConst.PROPERTY_MSG_REGION, this.brokerController.getBrokerConfig().getRegionId());
         response.addExtField(MessageConst.PROPERTY_TRACE_SWITCH, String.valueOf(this.brokerController.getBrokerConfig().isTraceOn()));
 
+        // 时钟校验
         log.debug("receive SendReplyMessage request command, {}", request);
         final long startTimstamp = this.brokerController.getBrokerConfig().getStartAcceptSendRequestTimeStamp();
         if (this.brokerController.getMessageStore().now() < startTimstamp) {
@@ -113,6 +114,7 @@ public class ReplyMessageProcessor extends AbstractSendMessageProcessor implemen
             return response;
         }
 
+        // 请求头校验
         response.setCode(-1);
         super.msgCheck(ctx, requestHeader, response);
         if (response.getCode() != -1) {
@@ -128,6 +130,7 @@ public class ReplyMessageProcessor extends AbstractSendMessageProcessor implemen
             queueIdInt = Math.abs(this.random.nextInt() % 99999999) % topicConfig.getWriteQueueNums();
         }
 
+        // 将消息封装到 MessageExtBrokerInner
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
         msgInner.setTopic(requestHeader.getTopic());
         msgInner.setQueueId(queueIdInt);
@@ -183,6 +186,7 @@ public class ReplyMessageProcessor extends AbstractSendMessageProcessor implemen
                 replyMessageRequestHeader.setProperties(MessageDecoder.messageProperties2String(msg.getProperties()));
 
                 try {
+                    // 同步调用，获取返回响应
                     RemotingCommand pushResponse = this.brokerController.getBroker2Client().callClient(channel, request);
                     assert pushResponse != null;
                     switch (pushResponse.getCode()) {

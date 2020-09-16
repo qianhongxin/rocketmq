@@ -196,12 +196,16 @@ public class TransactionalMessageBridge {
     }
 
     private MessageExtBrokerInner parseHalfMessageInner(MessageExtBrokerInner msgInner) {
+        // 将topic存储到msgInner的MessageConst.PROPERTY_REAL_TOPIC对应的字段中
         MessageAccessor.putProperty(msgInner, MessageConst.PROPERTY_REAL_TOPIC, msgInner.getTopic());
+        // 将queueId存储到msgInner的MessageConst.PROPERTY_REAL_QUEUE_ID对应的字段中
         MessageAccessor.putProperty(msgInner, MessageConst.PROPERTY_REAL_QUEUE_ID,
             String.valueOf(msgInner.getQueueId()));
         msgInner.setSysFlag(
             MessageSysFlag.resetTransactionValue(msgInner.getSysFlag(), MessageSysFlag.TRANSACTION_NOT_TYPE));
+        // 设置事务的topic
         msgInner.setTopic(TransactionalMessageUtil.buildHalfTopic());
+        // 设置事务的queueId，默认就用一个queue
         msgInner.setQueueId(0);
         msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
         return msgInner;

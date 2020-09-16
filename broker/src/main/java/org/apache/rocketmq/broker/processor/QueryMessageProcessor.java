@@ -131,6 +131,7 @@ public class QueryMessageProcessor implements NettyRequestProcessor {
 
         response.setOpaque(request.getOpaque());
 
+        // 如果os cache够大，MappedFile基本就在内存中，查询数据也是很快的。否则还要加载到内存中
         final SelectMappedBufferResult selectMappedBufferResult =
             this.brokerController.getMessageStore().selectOneMessageByOffset(requestHeader.getOffset());
         if (selectMappedBufferResult != null) {

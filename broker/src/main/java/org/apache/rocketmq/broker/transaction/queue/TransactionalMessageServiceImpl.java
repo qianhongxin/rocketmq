@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+// 事务消息处理组件
 public class TransactionalMessageServiceImpl implements TransactionalMessageService {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.TRANSACTION_LOGGER_NAME);
 

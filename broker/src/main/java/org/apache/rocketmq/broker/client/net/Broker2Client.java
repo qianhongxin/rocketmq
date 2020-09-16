@@ -77,6 +77,7 @@ public class Broker2Client {
     public RemotingCommand callClient(final Channel channel,
                                       final RemotingCommand request
     ) throws RemotingSendRequestException, RemotingTimeoutException, InterruptedException {
+        // 同步调用，超时时间10s
         return this.brokerController.getRemotingServer().invokeSync(channel, request, 10000);
     }
 
