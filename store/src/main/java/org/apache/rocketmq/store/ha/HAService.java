@@ -411,6 +411,7 @@ public class HAService {
                     int readSize = this.socketChannel.read(this.byteBufferRead);
                     if (readSize > 0) {
                         readSizeZeroTimes = 0;
+                        // 处理读到的数据
                         boolean result = this.dispatchReadRequest();
                         if (!result) {
                             log.error("HAClient, dispatchReadRequest error");
@@ -433,6 +434,8 @@ public class HAService {
             return true;
         }
 
+        // 对请求到的数据做处理
+        // 处理了粘包拆包问题
         private boolean dispatchReadRequest() {
             final int msgHeaderSize = 8 + 4; // phyoffset + size
             int readSocketPos = this.byteBufferRead.position();
