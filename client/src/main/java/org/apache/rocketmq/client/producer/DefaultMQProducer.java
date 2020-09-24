@@ -270,6 +270,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
         this.setProducerGroup(withNamespace(this.producerGroup));
         // 启动defaultMQProducerImpl
         this.defaultMQProducerImpl.start();
+        // traceDispatcher不是null，说明启动了消息轨迹功能
         if (null != traceDispatcher) {
             try {
                 traceDispatcher.start(this.getNamesrvAddr(), this.getAccessChannel());

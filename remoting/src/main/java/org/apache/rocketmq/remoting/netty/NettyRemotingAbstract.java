@@ -420,6 +420,7 @@ public abstract class NettyRemotingAbstract {
                 }
             });
 
+            // 利用CountDownLatch实现当前线程等待带超时时间的等结果完成
             RemotingCommand responseCommand = responseFuture.waitResponse(timeoutMillis);
             if (null == responseCommand) {
                 if (responseFuture.isSendRequestOK()) {

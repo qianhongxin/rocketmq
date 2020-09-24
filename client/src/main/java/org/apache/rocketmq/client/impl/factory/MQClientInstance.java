@@ -236,6 +236,7 @@ public class MQClientInstance {
                     // Start request-response channel
                     this.mQClientAPIImpl.start();
                     // Start various schedule tasks
+                    // 每2分钟抓取一次nameserver地址
                     this.startScheduledTask();
                     // Start pull service
                     this.pullMessageService.start();

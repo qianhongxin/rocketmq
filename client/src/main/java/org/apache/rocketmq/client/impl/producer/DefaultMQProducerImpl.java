@@ -607,10 +607,10 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                         this.updateFaultItem(mq.getBrokerName(), endTimestamp - beginTimestampPrev, false);
                         switch (communicationMode) {
                             case ASYNC:
-                                // 当前模式发送失败，不做重试处理
+                                // 当前模式如果发送失败，不做重试处理
                                 return null;
                             case ONEWAY:
-                                // 当前模式发送失败，不做重试处理
+                                // 当前模式如果发送失败，不做重试处理
                                 return null;
                             case SYNC:
                                 // 条件成立：说明发送消息失败，重试发送
@@ -745,6 +745,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         long beginStartTime = System.currentTimeMillis();
         // 从本地路由表brokerAddrTable中获取brokerName对应的ip地址
         String brokerAddr = this.mQClientFactory.findBrokerAddressInPublish(mq.getBrokerName());
+        // 容错处理
         if (null == brokerAddr) {
             // 第一次访问这个broker时brokerAddr肯定是空，所以这里触发加载，将加载的数据放入brokerAddrTable
             tryToFindTopicPublishInfo(mq.getTopic());
@@ -776,6 +777,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                     msgBodyCompressed = true;
                 }
 
+                // 事务消息标识
                 final String tranMsg = msg.getProperty(MessageConst.PROPERTY_TRANSACTION_PREPARED);
                 if (tranMsg != null && Boolean.parseBoolean(tranMsg)) {
                     sysFlag |= MessageSysFlag.TRANSACTION_PREPARED_TYPE;
@@ -793,6 +795,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                     this.executeCheckForbiddenHook(checkForbiddenContext);
                 }
 
+                // 消息轨迹等钩子处理
                 if (this.hasSendMessageHook()) {
                     context = new SendMessageContext();
                     context.setProducer(this);
@@ -871,6 +874,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                         if (timeout < costTimeAsync) {
                             throw new RemotingTooMuchRequestException("sendKernelImpl call timeout");
                         }
+                        // 消息发送逻辑
                         sendResult = this.mQClientFactory.getMQClientAPIImpl().sendMessage(
                             brokerAddr,
                             mq.getBrokerName(),
