@@ -42,6 +42,7 @@ public class IndexService {
     private final DefaultMessageStore defaultMessageStore;
     private final int hashSlotNum;
     private final int indexNum;
+    // 索引文件存储的目录：rootDir/index
     private final String storePath;
     private final ArrayList<IndexFile> indexFileList = new ArrayList<IndexFile>();
     private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
@@ -56,6 +57,7 @@ public class IndexService {
 
     public boolean load(final boolean lastExitOK) {
         File dir = new File(this.storePath);
+        // 获取index目录下所有的索引文件
         File[] files = dir.listFiles();
         if (files != null) {
             // ascending order
@@ -66,6 +68,7 @@ public class IndexService {
                     f.load();
 
                     if (!lastExitOK) {
+                        // 对过期的垃圾数据，删除掉
                         if (f.getEndTimestamp() > this.defaultMessageStore.getStoreCheckpoint()
                             .getIndexMsgTimestamp()) {
                             f.destroy(0);
@@ -198,7 +201,7 @@ public class IndexService {
         return topic + "#" + key;
     }
 
-    // IndexFile是对commitlog所有msg的索引文件，可以直接根据topic+msgId查具体的msg。consumequeue对应的是同一个topic的消息拉取。使用场景是不一样的
+    // IndexFile是对commitlog所有msg即消息的索引文件，可以直接根据topic+msgId查具体的msg。consumequeue对应的是同一个topic的消息拉取。使用场景是不一样的
     //
     // IndexFile的存储结构可以认为是一个hashmap。topic+key生成的hashcode%slotnums映射到具体的slottable里。slottable里存的slotvalue是当前hashcode对应的offset的位置索引
     //（pos= IndexHeader.INDEX_HEADER_SIZE + this.hashSlotNum* hashSlotSize + slotvalue * indexSize）。因为slotnums有500W所以哈希冲突的概率是很小的。但也会有。

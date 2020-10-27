@@ -606,7 +606,7 @@ public class CommitLog {
         MappedFile unlockMappedFile = null;
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
 
-        // 互斥锁，所有的messageQueue共享一把锁，串行写入消息到磁盘
+        // 互斥锁，所有的 messageQueue 共享一把锁，串行写入消息到磁盘
         putMessageLock.lock(); //spin or ReentrantLock ,depending on store config
         try {
             long beginLockTimestamp = this.defaultMessageStore.getSystemClock().now();

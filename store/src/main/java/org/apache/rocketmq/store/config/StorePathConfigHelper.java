@@ -29,6 +29,8 @@ public class StorePathConfigHelper {
     }
 
     public static String getStorePathIndex(final String rootDir) {
+        // File.separator根据不同操作系统不同，比如linux下就是“/”分隔符
+        // 所以这里返回值就是rootDir/index目录
         return rootDir + File.separator + "index";
     }
 

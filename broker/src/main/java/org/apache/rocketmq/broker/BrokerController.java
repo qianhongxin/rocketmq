@@ -367,6 +367,7 @@ public class BrokerController {
                 Executors.newFixedThreadPool(this.brokerConfig.getConsumerManageThreadPoolNums(), new ThreadFactoryImpl(
                     "ConsumerManageThread_"));
 
+            // 注册各种请求的处理器
             this.registerProcessor();
 
             // 下面这些代码是开始定时调度一些后台线程执行了
