@@ -168,6 +168,7 @@ public class MQClientInstance {
                 String[] item = broker.split(":");
                 int nums = Integer.parseInt(item[1]);
                 for (int i = 0; i < nums; i++) {
+                    // queueId即是这里for循环的i值
                     MessageQueue mq = new MessageQueue(topic, item[0], i);
                     info.getMessageQueueList().add(mq);
                 }
@@ -650,6 +651,7 @@ public class MQClientInstance {
                                     Entry<String, MQProducerInner> entry = it.next();
                                     MQProducerInner impl = entry.getValue();
                                     if (impl != null) {
+                                        // 这里更新topicPublishInfoTable数据
                                         impl.updateTopicPublishInfo(topic, publishInfo);
                                     }
                                 }
