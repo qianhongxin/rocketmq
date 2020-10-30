@@ -605,6 +605,7 @@ public class DefaultMessageStore implements MessageStore {
                                 continue;
                             }
 
+                            // 查询需要的数据
                             SelectMappedBufferResult selectResult = this.commitLog.getMessage(offsetPy, sizePy);
                             if (null == selectResult) {
                                 if (getResult.getBufferTotalSize() == 0) {

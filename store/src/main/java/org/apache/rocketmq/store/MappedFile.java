@@ -392,6 +392,8 @@ public class MappedFile extends ReferenceResource {
                 byteBuffer.position(pos);
                 ByteBuffer byteBufferNew = byteBuffer.slice();
                 byteBufferNew.limit(size);
+                // 此时byteBufferNew的position和limit之间的数据就是pos和pos+size范围的数据
+                // 这里创建新的ByteBuffer，接受这些数据并返回
                 return new SelectMappedBufferResult(this.fileFromOffset + pos, byteBufferNew, size, this);
             } else {
                 log.warn("matched, but hold failed, request pos: " + pos + ", fileFromOffset: "

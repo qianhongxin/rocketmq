@@ -108,8 +108,11 @@ public class ConsumerManageProcessor implements NettyRequestProcessor {
         final UpdateConsumerOffsetRequestHeader requestHeader =
             (UpdateConsumerOffsetRequestHeader) request
                 .decodeCommandCustomHeader(UpdateConsumerOffsetRequestHeader.class);
+        // 提交offset
+        // 入参客户端地址，topic，queueId，offset
         this.brokerController.getConsumerOffsetManager().commitOffset(RemotingHelper.parseChannelRemoteAddr(ctx.channel()), requestHeader.getConsumerGroup(),
             requestHeader.getTopic(), requestHeader.getQueueId(), requestHeader.getCommitOffset());
+
         response.setCode(ResponseCode.SUCCESS);
         response.setRemark(null);
         return response;
