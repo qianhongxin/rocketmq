@@ -213,7 +213,10 @@ public class HAConnection {
             HAConnection.log.info(this.getServiceName() + " service started");
 
             while (!this.isStopped()) {
+                // 以下是当前WriteSocketService需要死循环干的一些逻辑
+
                 try {
+                    // select的超时时间为1s，如果1s没有新的事件就返回
                     this.selector.select(1000);
 
                     if (-1 == HAConnection.this.slaveRequestOffset) {
@@ -300,6 +303,8 @@ public class HAConnection {
                 }
             }
 
+            // 以下逻辑是当前线程被 优雅停止 时需要做的一些事情，比如释放资源等
+
             HAConnection.this.haService.getWaitNotifyObject().removeFromWaitingThreadTable();
 
             if (this.selectMappedBufferResult != null) {
@@ -314,10 +319,12 @@ public class HAConnection {
 
             SelectionKey sk = this.socketChannel.keyFor(this.selector);
             if (sk != null) {
+                // 取消selector关注该事件
                 sk.cancel();
             }
 
             try {
+                // 关闭selector，socketChannel释放资源
                 this.selector.close();
                 this.socketChannel.close();
             } catch (IOException e) {
@@ -331,6 +338,7 @@ public class HAConnection {
             int writeSizeZeroTimes = 0;
             // Write Header
             while (this.byteBufferHeader.hasRemaining()) {
+                // 发送数据到slave
                 int writeSize = this.socketChannel.write(this.byteBufferHeader);
                 if (writeSize > 0) {
                     writeSizeZeroTimes = 0;
@@ -353,6 +361,7 @@ public class HAConnection {
             // Write Body
             if (!this.byteBufferHeader.hasRemaining()) {
                 while (this.selectMappedBufferResult.getByteBuffer().hasRemaining()) {
+                    // 发送数据到slave
                     int writeSize = this.socketChannel.write(this.selectMappedBufferResult.getByteBuffer());
                     if (writeSize > 0) {
                         writeSizeZeroTimes = 0;
@@ -367,6 +376,7 @@ public class HAConnection {
                 }
             }
 
+            // 通过hasRemaining，检查数据是否发送完毕
             boolean result = !this.byteBufferHeader.hasRemaining() && !this.selectMappedBufferResult.getByteBuffer().hasRemaining();
 
             if (!this.selectMappedBufferResult.getByteBuffer().hasRemaining()) {
