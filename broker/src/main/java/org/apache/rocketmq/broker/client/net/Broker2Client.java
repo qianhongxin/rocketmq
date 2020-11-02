@@ -51,6 +51,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 
+// 该类是broker给生产者，消费者发送消息，完成一些操作，比如检查事务消息是否完成等
 public class Broker2Client {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final BrokerController brokerController;
@@ -59,6 +60,7 @@ public class Broker2Client {
         this.brokerController = brokerController;
     }
 
+    // 检查生产者事务消息的状态
     public void checkProducerTransactionState(
         final String group,
         final Channel channel,
@@ -105,6 +107,7 @@ public class Broker2Client {
         return resetOffset(topic, group, timeStamp, isForce, false);
     }
 
+    // 充值消费的offset
     public RemotingCommand resetOffset(String topic, String group, long timeStamp, boolean isForce,
                                        boolean isC) {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);

@@ -45,6 +45,7 @@ public class ConsumerGroupInfo {
     // 消费模式：集群 or 广播
     private volatile MessageModel messageModel;
     private volatile ConsumeFromWhere consumeFromWhere;
+    // 上一次心跳时间
     private volatile long lastUpdateTimestamp = System.currentTimeMillis();
 
     public ConsumerGroupInfo(String groupName, ConsumeType consumeType, MessageModel messageModel,

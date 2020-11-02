@@ -56,3 +56,7 @@
 　　当同时消费消息时，消息同时消费的最大数量取决于消费客户端指定的线程池的大小。
 
 消息写入时是直接入CommitLog，然后有后台线程CommitLogDispatcher，异步生成IndexFile，ConsumeQueue中的数据
+
+10：通过nameserv，broker，client的processor中的请求类型，就知道这几个角色做哪些事情
+
+11. rocketmq的界面项目：https://github.com/apache/rocketmq-externals

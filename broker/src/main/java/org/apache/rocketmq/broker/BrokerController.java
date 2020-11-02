@@ -947,7 +947,9 @@ public class BrokerController {
 
         if (!messageStoreConfig.isEnableDLegerCommitLog()) {
             startProcessorByHa(messageStoreConfig.getBrokerRole());
+            // 数据同步
             handleSlaveSynchronize(messageStoreConfig.getBrokerRole());
+            // 注册到所有的nameserver，地址是配置文件配置的
             this.registerBrokerAll(true, false, true);
         }
 
