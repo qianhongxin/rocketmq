@@ -50,13 +50,81 @@ public class RouteInfoManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
     private final static long BROKER_CHANNEL_EXPIRED_TIME = 1000 * 60 * 2;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
+
+    /**
+     * 维护topic和队列相关的关系
+     **/
     private final HashMap<String/* topic */, List<QueueData>> topicQueueTable;
-    // 存储brokername和broker的映射关系
+
+    /**
+     * 存储brokername和broker的映射关系。
+     *
+     * 存储格式(配置信息参考me.txt的12点)，比如一个集群两个分片：
+     * [
+     *      // 分片1
+     *      {
+     *          "broker-a":
+     *          {
+     *              "DefaultCluster",
+     *              "broker-a",
+     *              [
+     *                  {
+     *                      "0":"192.168.1.110:8888",
+     *                      "1":"192.168.1.111:8888",
+     *                      "2":"192.168.1.112:8888"
+     *                  }
+     *              ]
+     *          }
+     *      },
+     *      // 分片2
+     *      {
+     *          "broker-b":
+     *          {
+     *              "DefaultCluster",
+     *              "broker-b",
+     *              [
+     *                  {
+     *                      "0":"192.168.1.120:8888",
+     *                      "0":"192.168.1.121:8888",
+     *                      "0":"192.168.1.122:8888",
+     *                  }
+     *              ]
+     *          }
+     *      }
+     * ]
+     **/
     private final HashMap<String/* brokerName */, BrokerData> brokerAddrTable;
-    // 维护一个集群有哪些broker存在的set集合数据结构
+
+    /**
+     * 维护一个集群有哪些broker存在的set集合数据结构。
+     * 存储格式(配置信息参考me.txt的12点)，比如一个集群两个分片：
+     * [
+     *      "DefaultCluster":
+     *      {
+     *          "broker-a",
+     *          "broker-b"
+     *      }
+     * ]
+     **/
     private final HashMap<String/* clusterName */, Set<String/* brokerName */>> clusterAddrTable;
-    // 存储brokerAddr和心跳数据结构BrokerLiveInfo的对印关系
+
+    /**
+     * 存储brokerAddr和心跳数据结构BrokerLiveInfo的对印关系。
+     * 存储格式(配置信息参考me.txt的12点)，比如一个集群两个分片：
+     * [
+     *      "192.168.1.120:8888":
+     *      {
+     *          "lastUpdateTimestamp": "2020-11-02 09:34:56",
+     *          "channel": xxx,
+     *          "haServerAddr": xxx,
+     *          "dataVersion": xxx
+     *      }
+     *      .......
+     * ]
+     **/
     private final HashMap<String/* brokerAddr */, BrokerLiveInfo> brokerLiveTable;
+
+
     private final HashMap<String/* brokerAddr */, List<String>/* Filter Server */> filterServerTable;
 
     public RouteInfoManager() {
@@ -103,7 +171,7 @@ public class RouteInfoManager {
         return topicList.encode();
     }
 
-    // 处理注册broker的逻辑  fixme
+    // 处理注册broker的逻辑
     public RegisterBrokerResult registerBroker(
         final String clusterName,
         final String brokerAddr,
@@ -157,6 +225,7 @@ public class RouteInfoManager {
                 Iterator<Entry<Long, String>> it = brokerAddrsMap.entrySet().iterator();
                 while (it.hasNext()) {
                     Entry<Long, String> item = it.next();
+                    // 如果brokerAddr一样，删除老的
                     if (null != brokerAddr && brokerAddr.equals(item.getValue()) && brokerId != item.getKey()) {
                         it.remove();
                     }
@@ -168,6 +237,7 @@ public class RouteInfoManager {
                 // 如果当前broker是master节点，则更新QueueData
                 if (null != topicConfigWrapper
                     && MixAll.MASTER_ID == brokerId) {
+                    // 查询是否有旧的
                     if (this.isBrokerTopicConfigChanged(brokerAddr, topicConfigWrapper.getDataVersion())
                         || registerFirst) {
                         ConcurrentMap<String, TopicConfig> tcTable =

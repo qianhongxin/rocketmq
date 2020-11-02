@@ -1028,9 +1028,13 @@ public class BrokerController {
         // 这是最最核心的注册调用
         // 利用brokerOuterAPI完成注册，在这里就完成了注册，而且是注册给所有nameserver节点，所以返回值是个list
         List<RegisterBrokerResult> registerBrokerResultList = this.brokerOuterAPI.registerBrokerAll(
+            // 配置文件获取的：比如 DefaultCluster
             this.brokerConfig.getBrokerClusterName(),
+            // ip（利用工具类获取本机ip的）: 端口（写死的8888）=>127.0.0.1:8888
             this.getBrokerAddr(),
+            // 配置文件获取的：比如 broker-a
             this.brokerConfig.getBrokerName(),
+            // 配置文件获取的(同一个集群的brokerId不能相同，但是brokerName可以一样)：比如 0-主 1等其他数字-从
             this.brokerConfig.getBrokerId(),
             this.getHAServerAddr(),
             topicConfigWrapper,

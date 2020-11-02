@@ -60,3 +60,10 @@
 10：通过nameserv，broker，client的processor中的请求类型，就知道这几个角色做哪些事情
 
 11. rocketmq的界面项目：https://github.com/apache/rocketmq-externals
+
+12. 配置参数解释：
+clusterName：集群名字,比如 DefaultCluster
+brokerName：broker分片名字，比如 broker-a，一个集群（即clusterName）下如果有多个分片，这多个分片名字不能相同，每个分片的从节点和主节点名字一样
+brokerId：分片id编号，0-主 1等其他非0数字-从
+brokerRole：分片角色，MASTER-主  SLAVE-从
+其他待添加
