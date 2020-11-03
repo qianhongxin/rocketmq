@@ -52,7 +52,9 @@ public class RouteInfoManager {
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     /**
-     * 维护topic和队列相关的关系
+     * 维护topicName和其下队列 相关的关系
+     * 默认情况下一个brokerName下的Topic的name是不同的。但是不同的brokerName可以有相同的topicName。而一个集群可以有多个不同的BrokerName集群
+     * 所以这里的value是list
      **/
     private final HashMap<String/* topic */, List<QueueData>> topicQueueTable;
 
@@ -250,6 +252,7 @@ public class RouteInfoManager {
                     }
                 }
 
+                // broker服务端的30秒心跳和第一次注册都是走这个方法的，所以这里更新心跳信息
                 // 比较核心的在这里，这里是处理每隔30s发送的注册请求当作心跳请求
                 // 最核心的处理逻辑：每次心跳来的时候都是封装一个新的BrokerLiveInfo放入brokerLiveTable。
                 //                所以每次心跳来的时候，最新的BrokerLiveInfo都会覆盖上一次BrokerLiveInfo
@@ -322,6 +325,9 @@ public class RouteInfoManager {
         queueData.setPerm(topicConfig.getPerm());
         queueData.setTopicSynFlag(topicConfig.getTopicSysFlag());
 
+        // 获取topic对应的旧的QueueData
+        // 默认情况下一个brokerName下的Topic的name是不同的。但是不同的brokerName可以有相同的topicName
+        // 所以这里获取到的是list
         List<QueueData> queueDataList = this.topicQueueTable.get(topicConfig.getTopicName());
         if (null == queueDataList) {
             queueDataList = new LinkedList<QueueData>();
@@ -334,7 +340,9 @@ public class RouteInfoManager {
             Iterator<QueueData> it = queueDataList.iterator();
             while (it.hasNext()) {
                 QueueData qd = it.next();
+                // 如果brokerName也相同，进入if
                 if (qd.getBrokerName().equals(brokerName)) {
+                    // 相同就不删除，不相同就删除。后面新增
                     if (qd.equals(queueData)) {
                         addNewOne = false;
                     } else {
@@ -745,6 +753,7 @@ public class RouteInfoManager {
         return topicList.encode();
     }
 
+    // 获取集群下的所有的topic
     public byte[] getTopicsByCluster(String cluster) {
         TopicList topicList = new TopicList();
         try {
@@ -761,6 +770,7 @@ public class RouteInfoManager {
                         for (QueueData queueData : queueDatas) {
                             if (brokerName.equals(queueData.getBrokerName())) {
                                 topicList.getTopicList().add(topic);
+                                // 只要匹配到一个brokerName，跳出循环返回
                                 break;
                             }
                         }

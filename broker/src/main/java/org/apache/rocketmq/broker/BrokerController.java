@@ -950,10 +950,12 @@ public class BrokerController {
             // 数据同步
             handleSlaveSynchronize(messageStoreConfig.getBrokerRole());
             // 注册到所有的nameserver，地址是配置文件配置的
+            // 后面的定时任务就是心跳
             this.registerBrokerAll(true, false, true);
         }
 
         // 去往所有的nameserver节点进行注册，每30s注册一次，nameserver对第一次之后的注册就算心跳
+        // 即心跳和第一次注册都是同一个请求类型即 RequestCode.REGISTER_BROKER
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
