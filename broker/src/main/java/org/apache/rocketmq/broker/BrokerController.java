@@ -115,15 +115,30 @@ public class BrokerController {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private static final InternalLogger LOG_PROTECTION = InternalLoggerFactory.getLogger(LoggerName.PROTECTION_LOGGER_NAME);
     private static final InternalLogger LOG_WATER_MARK = InternalLoggerFactory.getLogger(LoggerName.WATER_MARK_LOGGER_NAME);
+
+    // broker节点的配置参数
     private final BrokerConfig brokerConfig;
     private final NettyServerConfig nettyServerConfig;
     private final NettyClientConfig nettyClientConfig;
+
+    // 消息存储的配置参数
     private final MessageStoreConfig messageStoreConfig;
+
+    // 消费者组消费队列的offset的管理
+    // 集群模式下，同一个topic可以被多个消费者组消费，每个消费者组消费同一个队列的offset不同，相互独立的
     private final ConsumerOffsetManager consumerOffsetManager;
+    // 消费者管理组件，包括消费者组的
     private final ConsumerManager consumerManager;
+
     private final ConsumerFilterManager consumerFilterManager;
+
+    // 生产者管理组件，包括生产者组的
     private final ProducerManager producerManager;
+
+
     private final ClientHousekeepingService clientHousekeepingService;
+
+    // fixme
     private final PullMessageProcessor pullMessageProcessor;
     private final PullRequestHoldService pullRequestHoldService;
     private final MessageArrivingListener messageArrivingListener;
@@ -131,11 +146,16 @@ public class BrokerController {
     private final SubscriptionGroupManager subscriptionGroupManager;
     private final ConsumerIdsChangeListener consumerIdsChangeListener;
     private final RebalanceLockManager rebalanceLockManager = new RebalanceLockManager();
+
     // 访问集群其他broker，nameserver的api的逻辑封装
     private final BrokerOuterAPI brokerOuterAPI;
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl(
         "BrokerControllerScheduledThread"));
+
+    // 从节点数据同步组件
     private final SlaveSynchronize slaveSynchronize;
+
+    // 定义的队列，服务下面的线程池
     private final BlockingQueue<Runnable> sendThreadPoolQueue;
     private final BlockingQueue<Runnable> pullThreadPoolQueue;
     private final BlockingQueue<Runnable> replyThreadPoolQueue;
@@ -146,6 +166,7 @@ public class BrokerController {
     private final BlockingQueue<Runnable> endTransactionThreadPoolQueue;
     private final FilterServerManager filterServerManager;
     private final BrokerStatsManager brokerStatsManager;
+
     // 服务端消息发送钩子，用于扩展的，目前版本还未使用
     private final List<SendMessageHook> sendMessageHookList = new ArrayList<SendMessageHook>();
     // 服务端消息消费钩子，用于扩展的，目前版本还未使用
@@ -154,7 +175,11 @@ public class BrokerController {
     // broker需要接受producer和从consumer的拉取请求的，所以broker必然有netty的服务器的，这里就是创建netty服务器，基于Netty做NIO通信
     private RemotingServer remotingServer;
     private RemotingServer fastRemotingServer;
+
+    // topic管理
     private TopicConfigManager topicConfigManager;
+
+    // 下面是线程池，执行对应任务的，队列是上面定义的
     private ExecutorService sendMessageExecutor;
     private ExecutorService pullMessageExecutor;
     private ExecutorService replyMessageExecutor;
@@ -164,15 +189,19 @@ public class BrokerController {
     private ExecutorService heartbeatExecutor;
     private ExecutorService consumerManageExecutor;
     private ExecutorService endTransactionExecutor;
+
     private boolean updateMasterHAServerAddrPeriodically = false;
     private BrokerStats brokerStats;
     private InetSocketAddress storeHost;
     private BrokerFastFailure brokerFastFailure;
     private Configuration configuration;
     private FileWatchService fileWatchService;
+
+    // 处理事务消息的
     private TransactionalMessageCheckService transactionalMessageCheckService;
     private TransactionalMessageService transactionalMessageService;
     private AbstractTransactionalMessageCheckListener transactionalMessageCheckListener;
+
     private Future<?> slaveSyncFuture;
     private Map<Class,AccessValidator> accessValidatorMap = new HashMap<Class, AccessValidator>();
 
@@ -799,6 +828,7 @@ public class BrokerController {
         return subscriptionGroupManager;
     }
 
+    // 优雅关闭，释放资源
     public void shutdown() {
         if (this.brokerStatsManager != null) {
             this.brokerStatsManager.shutdown();
@@ -894,6 +924,7 @@ public class BrokerController {
         }
     }
 
+    // 取消所有nameserver上该broker的注册
     private void unregisterBrokerAll() {
         this.brokerOuterAPI.unregisterBrokerAll(
             this.brokerConfig.getBrokerClusterName(),
@@ -906,6 +937,7 @@ public class BrokerController {
         return this.brokerConfig.getBrokerIP1() + ":" + this.nettyServerConfig.getListenPort();
     }
 
+    // broker启动，启动相关组件
     public void start() throws Exception {
         if (this.messageStore != null) {
             // 启动消息存储组件
