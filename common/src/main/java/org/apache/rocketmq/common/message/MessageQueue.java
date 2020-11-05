@@ -24,7 +24,7 @@ public class MessageQueue implements Comparable<MessageQueue>, Serializable {
     private String topic;
     // messageQueue所在broker的broker的名字
     private String brokerName;
-    // 队列的id，见MQClientInstance的171行
+    // 队列的id，见 MQClientInstance 的171行
     private int queueId;
 
     public MessageQueue() {

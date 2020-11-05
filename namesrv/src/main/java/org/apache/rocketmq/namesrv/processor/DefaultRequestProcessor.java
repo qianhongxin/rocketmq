@@ -353,6 +353,7 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
 
         TopicRouteData topicRouteData = this.namesrvController.getRouteInfoManager().pickupTopicRouteData(requestHeader.getTopic());
 
+        // 设置 topicRouteData 的orderTopicConf属性值
         if (topicRouteData != null) {
             if (this.namesrvController.getNamesrvConfig().isOrderMessageEnable()) {
                 String orderTopicConf =
