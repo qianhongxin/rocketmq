@@ -55,6 +55,7 @@ public class TopicConfigManager extends ConfigManager {
     public TopicConfigManager() {
     }
 
+    // 以下是默认创建的一些系统级别的topic。我们自己创建的topic会利用控制台提供的api去创建，创建时会指定readqueuenums和writequeueunums等参数
     public TopicConfigManager(BrokerController brokerController) {
         this.brokerController = brokerController;
         {

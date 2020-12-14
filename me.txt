@@ -67,3 +67,7 @@ brokerName：broker分片名字，比如 broker-a，一个集群（即clusterNam
 brokerId：分片id编号，0-主 1等其他非0数字-从(不同的broker的id不能一样)
 brokerRole：分片角色，MASTER-主  SLAVE-从
 其他待添加
+
+
+问题：
+MessageQueue的queueId作用？这个东西在server端还落盘了

@@ -46,10 +46,13 @@ public class HAService {
 
     private final AtomicInteger connectionCount = new AtomicInteger(0);
 
+    // 存储和slave建立的连接的集合
     private final List<HAConnection> connectionList = new LinkedList<>();
 
+    // 处理和slave建立长连接的线程
     private final AcceptSocketService acceptSocketService;
 
+    // 消息存储管理器
     private final DefaultMessageStore defaultMessageStore;
 
     private final WaitNotifyObject waitNotifyObject = new WaitNotifyObject();
@@ -153,6 +156,11 @@ public class HAService {
     public AtomicLong getPush2SlaveMaxOffset() {
         return push2SlaveMaxOffset;
     }
+
+    // HA模块的网络通信是基于java原生NIO的reactor模式
+    // AcceptSocketService处理的是新连接的建立，并且对每个建立的连接都启动两个线程，一个处理读请求，一个处理写的请求
+
+
 
     /**
      * Listens to slave connections to create {@link HAConnection}.
@@ -499,37 +507,44 @@ public class HAService {
             return result;
         }
 
+        // 连接到master broker节点
         private boolean connectMaster() throws ClosedChannelException {
             if (null == socketChannel) {
                 String addr = this.masterAddress.get();
                 if (addr != null) {
-
+                    // 地址转换
                     SocketAddress socketAddress = RemotingUtil.string2SocketAddress(addr);
                     if (socketAddress != null) {
+                        // 三次握手建立socket连接，即底层是tcp连接
                         this.socketChannel = RemotingUtil.connect(socketAddress);
                         if (this.socketChannel != null) {
+                            // 将socketChannel注册到selector上，并关注read事件
                             this.socketChannel.register(this.selector, SelectionKey.OP_READ);
                         }
                     }
                 }
 
+                // 更新offset
                 this.currentReportedOffset = HAService.this.defaultMessageStore.getMaxPhyOffset();
-
+                // 更新写时间
                 this.lastWriteTimestamp = System.currentTimeMillis();
             }
 
             return this.socketChannel != null;
         }
 
+        // 关闭和master broker节点的连接
         private void closeMaster() {
             if (null != this.socketChannel) {
                 try {
 
+                    // 取消关注的事件类型，防止下一次io多路复用又处理了，浪费性能
                     SelectionKey sk = this.socketChannel.keyFor(this.selector);
                     if (sk != null) {
                         sk.cancel();
                     }
 
+                    // 四次挥手，释放连接，释放资源
                     this.socketChannel.close();
 
                     this.socketChannel = null;

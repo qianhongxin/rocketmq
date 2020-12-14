@@ -986,7 +986,7 @@ public class BrokerController {
             this.registerBrokerAll(true, false, true);
         }
 
-        // 去往所有的nameserver节点进行注册，每30s注册一次，nameserver对第一次之后的注册就算心跳
+        // 向所有的nameserver节点进行注册，每30s注册一次，nameserver对第一次之后的注册就算心跳
         // 即心跳和第一次注册都是同一个请求类型即 RequestCode.REGISTER_BROKER
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
@@ -1074,6 +1074,7 @@ public class BrokerController {
             topicConfigWrapper,
             this.filterServerManager.buildNewFilterServerList(),
             oneway,
+            // 注册请求的超时时间
             this.brokerConfig.getRegisterBrokerTimeoutMills(),
             this.brokerConfig.isCompressedRegister());
 
