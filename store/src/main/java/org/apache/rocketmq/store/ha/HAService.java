@@ -159,6 +159,7 @@ public class HAService {
 
     // HA模块的网络通信是基于java原生NIO的reactor模式
     // AcceptSocketService处理的是新连接的建立，并且对每个建立的连接都启动两个线程，一个处理读请求，一个处理写的请求
+    // rocketmq中master负责接受写请求，master和slave都可接受读请求
 
 
 
@@ -217,6 +218,7 @@ public class HAService {
                     if (selected != null) {
                         for (SelectionKey k : selected) {
                             if ((k.readyOps() & SelectionKey.OP_ACCEPT) != 0) {
+                                // 接受slave节点的HAClient发过来的tcp建立连接
                                 SocketChannel sc = ((ServerSocketChannel) k.channel()).accept();
 
                                 if (sc != null) {
