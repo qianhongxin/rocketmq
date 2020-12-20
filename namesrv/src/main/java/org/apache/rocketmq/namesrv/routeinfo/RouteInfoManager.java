@@ -58,7 +58,7 @@ public class RouteInfoManager {
 
     /**
      * 维护topicName和其下队列 相关的关系
-     * 一个brokerName下的Topic的name是不同的。一个集群下会有多个broker节点，每个分片集群的brokerName不同。而
+     * 一个brokerName下的Topic的name是不同的。一个集群下会有多个分片集群，每个分片集群下会有多个broker节点，每个分片集群的brokerName不同。而
      * topic的写队列在各个分片的master节点，读队列在各个分片集群的slave节点上。
      * 所以value为什么是list？其实list的每个都代表一个分片集群，里面的值就是这个分片集群的中这个topic的写队列数量，读队列数量，brokerName等
      **/

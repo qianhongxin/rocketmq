@@ -41,6 +41,7 @@ public class MappedFileQueue {
     // 如果是CommitLog的话，该值是1G
     private final int mappedFileSize;
 
+    // 写数据的时候，可以无锁读，高性能
     private final CopyOnWriteArrayList<MappedFile> mappedFiles = new CopyOnWriteArrayList<MappedFile>();
 
     private final AllocateMappedFileService allocateMappedFileService;
