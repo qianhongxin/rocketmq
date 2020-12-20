@@ -1340,6 +1340,7 @@ public class CommitLog {
                     queueOffset, CommitLog.this.defaultMessageStore.now() - beginTimeMills);
             }
 
+            // putxxx方法，已经有长度了，所以是长度+body解决类似于半包沾包的数据拆分问题
             // Initialization of storage space
             this.resetByteBuffer(msgStoreItemMemory, msgLen);
             // 1 TOTALSIZE
