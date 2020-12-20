@@ -61,27 +61,34 @@ import org.apache.rocketmq.store.index.QueryOffsetResult;
 import org.apache.rocketmq.store.schedule.ScheduleMessageService;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 
+// 默认的消息存储组件
 public class DefaultMessageStore implements MessageStore {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
+    // 消息存储的配置信息
     private final MessageStoreConfig messageStoreConfig;
     // CommitLog
     private final CommitLog commitLog;
 
+    // topic下的messagequeue下的多个consumeQueue
     private final ConcurrentMap<String/* topic */, ConcurrentMap<Integer/* queueId */, ConsumeQueue>> consumeQueueTable;
 
     private final FlushConsumeQueueService flushConsumeQueueService;
 
+    // 清楚已消费过的 commit log 数据
     private final CleanCommitLogService cleanCommitLogService;
 
+    // 删除已消费的consume queue中的消息索引数据的任务
     private final CleanConsumeQueueService cleanConsumeQueueService;
 
+    // 建立index索引的任务
     private final IndexService indexService;
 
     private final AllocateMappedFileService allocateMappedFileService;
 
     private final ReputMessageService reputMessageService;
 
+    // 高可用（deleger未发明之前用）
     private final HAService haService;
 
     private final ScheduleMessageService scheduleMessageService;
@@ -1730,6 +1737,7 @@ public class DefaultMessageStore implements MessageStore {
         }
     }
 
+    // 异步给commitlog中的消息建立索引consumeQueue
     class FlushConsumeQueueService extends ServiceThread {
         private static final int RETRY_TIMES_OVER = 3;
         private long lastFlushTimestamp = 0;

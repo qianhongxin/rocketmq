@@ -71,3 +71,11 @@ brokerRole：分片角色，MASTER-主  SLAVE-从
 
 问题：
 MessageQueue的queueId作用？这个东西在server端还落盘了
+
+topic，messagequeue，consumequeue，commitlog，index几个的关系
+
+commitlog，consumequeue，index中的组成成分
+
+整体功能结构图，局部功能结构图
+
+优缺点，适用场景，解决问题

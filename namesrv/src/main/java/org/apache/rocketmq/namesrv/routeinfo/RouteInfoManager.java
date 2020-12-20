@@ -46,6 +46,11 @@ import org.apache.rocketmq.common.sysflag.TopicSysFlag;
 import org.apache.rocketmq.remoting.common.RemotingUtil;
 
 // 当做注册中心，路由信息存储用
+
+// clusterName：集群名字,比如 DefaultCluster
+// brokerName：broker分片名字，比如 broker-a，一个集群（即clusterName）下如果有多个分片，这多个分片名字不能相同，每个分片的从节点和主节点名字一样
+// brokerId：分片id编号，0-主 1等其他非0数字-从(不同的broker的id不能一样)
+// brokerRole：分片角色，MASTER-主  SLAVE-从
 public class RouteInfoManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
     private final static long BROKER_CHANNEL_EXPIRED_TIME = 1000 * 60 * 2;
@@ -53,8 +58,9 @@ public class RouteInfoManager {
 
     /**
      * 维护topicName和其下队列 相关的关系
-     * 默认情况下一个brokerName下的Topic的name是不同的。但是不同的brokerName可以有相同的topicName。而一个集群可以有多个不同的BrokerName集群
-     * 所以这里的value是list
+     * 一个brokerName下的Topic的name是不同的。一个集群下会有多个broker节点，每个分片集群的brokerName不同。而
+     * topic的写队列在各个分片的master节点，读队列在各个分片集群的slave节点上。
+     * 所以value为什么是list？其实list的每个都代表一个分片集群，里面的值就是这个分片集群的中这个topic的写队列数量，读队列数量，brokerName等
      **/
     private final HashMap<String/* topic */, List<QueueData>> topicQueueTable;
 
@@ -87,8 +93,8 @@ public class RouteInfoManager {
      *              [
      *                  {
      *                      "0":"192.168.1.120:8888",
-     *                      "0":"192.168.1.121:8888",
-     *                      "0":"192.168.1.122:8888",
+     *                      "1":"192.168.1.121:8888",
+     *                      "2":"192.168.1.122:8888",
      *                  }
      *              ]
      *          }

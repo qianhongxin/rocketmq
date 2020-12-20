@@ -420,6 +420,7 @@ public class CommitLog {
         this.confirmOffset = phyOffset;
     }
 
+    // 已被废弃
     @Deprecated
     public void recoverAbnormally(long maxPhyOffsetOfConsumeQueue) {
         // recover by the minimum time stamp
