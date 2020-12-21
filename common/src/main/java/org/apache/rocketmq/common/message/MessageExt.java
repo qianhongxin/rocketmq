@@ -28,6 +28,10 @@ public class MessageExt extends Message {
     private static final long serialVersionUID = 5720810158625748049L;
 
     // 消息发往的队列id
+    // 这里的queueId就是MessageQueue中的queueId，系统其他类的queueId也是MessageQueue的queueId。
+    // topic都是在admin上创建的。一个topic在创建时，会指定读和写的队列数量（创建时会根据指定的分片数量，将要创建的队列均匀分配）。broker在关闭时会写topic数据到磁盘上，启动时会
+    // 在磁盘加载topic的数据，然后注册到nameserver上。producer会拉取topic的这些元数据，因为队列数在生命周期中都不会变。所以queueId也是一定的，不会变化
+    // queueId可以用于consumeQueue文件的后缀名构成等
     private int queueId;
 
     private int storeSize;

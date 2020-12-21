@@ -485,6 +485,7 @@ public class RouteInfoManager {
         }
     }
 
+    // 返回topic的元信息，即在哪些broker上，broker的地址，读写队列的数量等
     public TopicRouteData pickupTopicRouteData(final String topic) {
         TopicRouteData topicRouteData = new TopicRouteData();
         boolean foundQueueData = false;
